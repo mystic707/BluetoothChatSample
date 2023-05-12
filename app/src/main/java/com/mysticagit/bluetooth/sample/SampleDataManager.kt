@@ -1,6 +1,7 @@
 package com.mysticagit.bluetooth.sample
 
 import android.bluetooth.BluetoothSocket
+import android.content.IntentFilter
 import java.util.*
 
 object SampleDataManager {
@@ -24,6 +25,10 @@ object SampleDataManager {
     }
 
 
+    interface RegisterReceiverListener {
+
+        fun onRegister(filter: IntentFilter)
+    }
     interface DeviceListSelectionListener {
 
         fun onSelection(state: SelectionState, deviceInfo: PairableDeviceInfo?)

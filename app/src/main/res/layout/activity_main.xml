@@ -17,7 +17,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Bluetooth Sample"/>
+            android:text="[ Bluetooth Sample ]"/>
 
         <Button
             android:layout_width="match_parent"
@@ -37,11 +37,15 @@
             android:id="@+id/btn_find_connectable_device"
             android:text="블루투스 기기 확인 및 연결" />
 
-        <Button
+        <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:id="@+id/btn_check_connection"
-            android:text="블루투스 연결상태 확인" />
+            android:text="\n"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="[ 블루투스 연결상태 확인 ]"/>
 
         <TextView
             android:layout_width="match_parent"
@@ -52,7 +56,12 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="메시지 보내기"/>
+            android:text="\n\n"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="[ 메시지 보내기 ]"/>
 
         <EditText
             android:layout_width="match_parent"
@@ -65,6 +74,11 @@
             android:layout_height="wrap_content"
             android:id="@+id/btn_send_message"
             android:text="메시지 전송" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="[ 메시지 기록 ]"/>
 
         <ScrollView
             android:layout_width="match_parent"

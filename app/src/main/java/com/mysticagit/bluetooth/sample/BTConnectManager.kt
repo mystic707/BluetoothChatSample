@@ -4,6 +4,7 @@ import android.Manifest
 import android.bluetooth.*
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.util.Log
 import androidx.core.app.ActivityCompat
@@ -31,6 +32,9 @@ object BTConnectManager {
     var connectionState: ConnectionState = ConnectionState.None
 
 
+    /**
+     * 리스너 설정
+     */
     fun setBluetoothReadListener(listener: SampleDataManager.BluetoothReadMessageListener) {
         btReadListener = listener
     }
@@ -44,6 +48,10 @@ object BTConnectManager {
         bluetoothAdapter = bluetoothManager.adapter
     }
 
+
+    /**
+     *
+     */
     fun getBluetoothIntent(): Intent {
         var enableBluetoothIntent: Intent = Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE)
         // 300초 동안 검색 허용
@@ -52,6 +60,75 @@ object BTConnectManager {
         return enableBluetoothIntent
     }
 
+    fun startConnectWithDeviceInfo(deviceInfo: SampleDataManager.PairableDeviceInfo) {
+        deviceInfo.deviceAddress?.let {
+            connectedDevice = bluetoothAdapter?.getRemoteDevice(it)
+
+            connect()
+        }
+    }
+
+    fun getPairableBluetoothDevice(): ArrayList<SampleDataManager.PairableDeviceInfo> {
+        var pairableDeviceList = ArrayList<SampleDataManager.PairableDeviceInfo>()
+        var bluetoothDevice: Set<BluetoothDevice>
+
+        if (ActivityCompat.checkSelfPermission(MainActivity.context, Manifest.permission.BLUETOOTH_CONNECT)
+            != PackageManager.PERMISSION_GRANTED) {
+
+            Log.d(SampleDataManager.logTag, "getPairableBluetoothDevice, need to request bluetooth permissions")
+        }
+        else {
+            bluetoothAdapter?.let {
+                bluetoothDevice = it.bondedDevices as Set<BluetoothDevice>  // bondedDevices : 페어링된 기계
+
+                if(bluetoothDevice.isNotEmpty()) {
+                    pairableDeviceList.clear()
+
+                    for(device in bluetoothDevice) {
+                        var deviceInfo = SampleDataManager.PairableDeviceInfo(device.name, device.address)
+                        pairableDeviceList.add(deviceInfo)
+                    }
+                }
+                else {
+                    Log.d(SampleDataManager.logTag, "getPairableBluetoothDevice, not found bluetooth deivce")
+                }
+            } ?: {
+                Log.d(SampleDataManager.logTag, "getPairableBluetoothDevice, need to enable Bluetooth")
+            }
+        }
+
+        Log.d(SampleDataManager.logTag, "findPairableBluetoothDevice, device size : " + pairableDeviceList.size)
+        return pairableDeviceList
+    }
+
+    fun getBluetoothFinderFilter(): IntentFilter? {
+        if (ActivityCompat.checkSelfPermission(MainActivity.context, Manifest.permission.BLUETOOTH_SCAN)
+            != PackageManager.PERMISSION_GRANTED) {
+
+            Log.d(SampleDataManager.logTag, "registerDeviceFinder, not have permission")
+        } else {
+            bluetoothAdapter?.let {
+                if(it.isDiscovering) {
+                    it.cancelDiscovery()
+                }
+                else {
+                    if(it.isEnabled) {
+                        it.startDiscovery()     // 검색 시작
+
+                        return IntentFilter(BluetoothDevice.ACTION_FOUND)
+                    } else {
+                        Log.d(SampleDataManager.logTag, "registerDeviceFinder, need to enable bluetoothAdapter")
+                    }
+                }
+            }
+        }
+        return null
+    }
+
+
+    /**
+     *
+     */
     class ConnectThread : Thread {
         var device: BluetoothDevice? = null
         var socket: BluetoothSocket? = null
@@ -60,19 +137,18 @@ object BTConnectManager {
             device = bDevice
 
             var tmpSocket: BluetoothSocket? = null
-            if (ActivityCompat.checkSelfPermission(
-                MainActivity.context,
-                Manifest.permission.BLUETOOTH_CONNECT
-            ) != PackageManager.PERMISSION_GRANTED
+            if (ActivityCompat.checkSelfPermission(MainActivity.context, Manifest.permission.BLUETOOTH_CONNECT)
+                != PackageManager.PERMISSION_GRANTED
             ) {
-
-            } else {
+                Log.d(SampleDataManager.logTag, "ConnectThread, no permissions")
+            }
+            else {
                 try {
                     device?.let {
                         tmpSocket = it.createRfcommSocketToServiceRecord(SampleDataManager.myUUID)
                     }
                 } catch (e: Exception) {
-
+                    Log.d(SampleDataManager.logTag, "ConnectThread, exception")
                 }
                 socket = tmpSocket
             }
@@ -82,11 +158,9 @@ object BTConnectManager {
         override fun run() {
             socket?.let {
                 try {
-                    if (ActivityCompat.checkSelfPermission(
-                            MainActivity.context,
-                            Manifest.permission.BLUETOOTH_CONNECT
-                        ) != PackageManager.PERMISSION_GRANTED
-                    ) {
+                    if (ActivityCompat.checkSelfPermission(MainActivity.context, Manifest.permission.BLUETOOTH_CONNECT)
+                        != PackageManager.PERMISSION_GRANTED)
+                    {
                         Log.d(SampleDataManager.logTag, "ConnectThread run, no permissions")
                         return
                     } else {
@@ -101,6 +175,7 @@ object BTConnectManager {
                     } catch (e: Exception) {
 
                     }
+
                     connectionFailed()
                     return
                 }
@@ -114,8 +189,8 @@ object BTConnectManager {
 
         fun cancel() {
             try {
-                socket?.close()
                 Log.d(SampleDataManager.logTag, "ConnectThread cancel, socket close")
+                socket?.close()
             } catch (e: Exception) {
                 Log.d(SampleDataManager.logTag, "ConnectThread cancel, exception")
             }
@@ -148,50 +223,34 @@ object BTConnectManager {
         override fun run() {
             val buffer = ByteArray(1024)
             var bytes: Int = 0
-            Log.d(SampleDataManager.logTag, "ConnectedThread, 001")
 
-                try {
-                    Log.d(SampleDataManager.logTag, "ConnectedThread, 002")
-                    while(true) {
-                        input?.let {
-                            Log.d(SampleDataManager.logTag, "ConnectedThread, 003")
-                            bytes = it.read(buffer)
-                            Log.d(SampleDataManager.logTag, "ConnectedThread, 004")
-                            if (bytes != 0) {
-                                Log.d(SampleDataManager.logTag, "ConnectedThread, 005")
-                                var readData: String? = String(buffer, 0, bytes)
-                                Log.d(SampleDataManager.logTag, "ConnectedThread, 006")
-                                Log.d(
-                                    SampleDataManager.logTag,
-                                    "ConnectedThread run, readData : $readData"
-                                )
+            try {
+                while(true) {   // read 탐지를 지속적으로 할 수 있게 while 처리 (while 없을 경우 1회 탐지하고 완료됨)
+                    input?.let {
+                        bytes = it.read(buffer)
 
-                                btReadListener?.onReadMessage(readData)
-                                Log.d(SampleDataManager.logTag, "ConnectedThread, 007")
-                            }
+                        if (bytes != 0) {
+                            var readData: String? = String(buffer, 0, bytes)
+                            Log.d(SampleDataManager.logTag, "ConnectedThread run, readData : $readData")
+
+                            btReadListener?.onReadMessage(readData)     // 리스너로 읽은 메시지 전달
                         }
                     }
-                } catch (e: Exception) {
-                    Log.d(SampleDataManager.logTag, "ConnectedThread, 008, : $e")
-                    connectionLost()
                 }
+            } catch (e: Exception) {
+                Log.d(SampleDataManager.logTag, "ConnectedThread run, exception : $e")
+                connectionLost()
+            }
         }
 
         fun sendMessage(message: String) {
             try {
                 if (output != null) {
-                    Log.d(
-                        SampleDataManager.logTag,
-                        "ConnectedThread sendMessage, message : $message"
-                    )
-//                val buffer = message.toByteArray()
-//                var writeData: String = String(buffer, 0, message)
+                    Log.d(SampleDataManager.logTag, "ConnectedThread sendMessage, message : $message")
                     output?.write(message.toByteArray())
                 }
             } catch (e: Exception) {
-                Log.d(
-                    SampleDataManager.logTag,
-                    "ConnectedThread sendMessage, exception")
+                Log.d(SampleDataManager.logTag, "ConnectedThread sendMessage, exception")
             }
         }
 
@@ -211,29 +270,16 @@ object BTConnectManager {
         var serverSocket: BluetoothServerSocket? = null
 
         constructor() {
-
-        }
-
-        init {
-            initSocket()
-        }
-
-        fun initSocket() {
             var tmpSocket: BluetoothServerSocket? = null
 
-            if (ActivityCompat.checkSelfPermission(
-                    MainActivity.context,
-                    Manifest.permission.BLUETOOTH_CONNECT
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
+            if (ActivityCompat.checkSelfPermission(MainActivity.context,Manifest.permission.BLUETOOTH_CONNECT)
+                != PackageManager.PERMISSION_GRANTED)
+            {
                 return
-            } else {
-                tmpSocket =
-                    BTConnectManager.bluetoothAdapter?.listenUsingRfcommWithServiceRecord(
-                        "BluetoothSample",
-                        SampleDataManager.myUUID
-                    )
-                Log.d(SampleDataManager.logTag, "AcceptThread, set socket")
+            }
+            else {
+                Log.d(SampleDataManager.logTag, "AcceptThread, set serverSocket")
+                tmpSocket = bluetoothAdapter?.listenUsingRfcommWithServiceRecord("BluetoothSample", SampleDataManager.myUUID)
             }
 
             serverSocket = tmpSocket
@@ -241,14 +287,17 @@ object BTConnectManager {
 
         override fun run() {
             var socket: BluetoothSocket? = null
+
             try {
-                socket = serverSocket?.accept()
                 Log.d(SampleDataManager.logTag, "AcceptThread run")
+                socket = serverSocket?.accept()
             } catch (e: Exception) {
+                Log.d(SampleDataManager.logTag, "AcceptThread run, accept exception")
+
                 try {
                     serverSocket?.close()
                 } catch (e: Exception) {
-                    Log.d(SampleDataManager.logTag, "AcceptThread run, accept exception")
+
                 }
             }
 
@@ -260,10 +309,11 @@ object BTConnectManager {
                     }
                     ConnectionState.None, ConnectionState.Connected -> {
                         try {
-                            socket.close()
                             Log.d(SampleDataManager.logTag, "AcceptThread run, socket close")
+                            socket.close()
+
                         } catch (e: Exception) {
-                            Log.d(SampleDataManager.logTag, "AcceptThread run, case exception")
+                            Log.d(SampleDataManager.logTag, "AcceptThread run, close exception")
                         }
                     }
                 }
@@ -279,8 +329,8 @@ object BTConnectManager {
         }
     }
 
-    fun connect() {
-        cancelDeviceDiscovery()
+    private fun connect() {
+        cancelDeviceDiscovery()     // 탐색 중지
 
         if(connectionState == ConnectionState.Connecting) {
             connectThread?.cancel()
@@ -332,7 +382,7 @@ object BTConnectManager {
         startListening()
     }
 
-    fun startListening() {
+    private fun startListening() {
         Log.d(SampleDataManager.logTag, "startListening")
 
         if(connectThread != null) {
@@ -376,12 +426,10 @@ object BTConnectManager {
         btStateListener?.onState(ConnectionState.None, "")
     }
 
-    fun cancelDeviceDiscovery() {
-        if (ActivityCompat.checkSelfPermission(
-                MainActivity.context,
-                Manifest.permission.BLUETOOTH_SCAN
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
+    private fun cancelDeviceDiscovery() {
+        if (ActivityCompat.checkSelfPermission(MainActivity.context, Manifest.permission.BLUETOOTH_SCAN)
+            != PackageManager.PERMISSION_GRANTED)
+        {
             return
         } else {
             bluetoothAdapter?.cancelDiscovery()
@@ -389,13 +437,8 @@ object BTConnectManager {
     }
 
     fun sendMessage(text: String) {
-//        var tmpConnectedThread: ConnectedThread? = null
-//
-//        if(connectionState != ConnectionState.Connected) {
-//            tmpConnectedThread = connectedThread
-//        }
-//
-//        tmpConnectedThread?.sendMessage(text)
         connectedThread?.sendMessage(text)
     }
+
+    // end of class
 }
