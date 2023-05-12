@@ -40,9 +40,4 @@
     <!-- Android 10 (API level 29) and higher -->
 <!--    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />-->
 
-<!--    <uses-feature android:name="android.hardware.bluetooth" android:required="true"/>-->
-<!--    <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />-->
-
-<!--    <uses-permission android:name="android.permission.ACCESS_SURFACE_FLINGER" />-->
-
 </manifest>
