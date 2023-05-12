@@ -10,20 +10,20 @@ import android.widget.TextView
 class DeviceListDialog : Dialog {
 
     private lateinit var context: Context
-    private lateinit var pairedDeviceList: ArrayList<SampleManager.PairableDeviceInfo>
-    private lateinit var selectionListener: SampleManager.DeviceListSelectionListener
-    private var newDeviceList: ArrayList<SampleManager.PairableDeviceInfo>? = null
+    private lateinit var pairedDeviceList: ArrayList<SampleDataManager.PairableDeviceInfo>
+    private lateinit var selectionListener: SampleDataManager.DeviceListSelectionListener
+    private var newDeviceList: ArrayList<SampleDataManager.PairableDeviceInfo>? = null
 
     constructor(
         context: Context,
-        deviceList: ArrayList<SampleManager.PairableDeviceInfo>,
-        listener: SampleManager.DeviceListSelectionListener)
+        deviceList: ArrayList<SampleDataManager.PairableDeviceInfo>,
+        listener: SampleDataManager.DeviceListSelectionListener)
             : super(context, android.R.style.Theme_DeviceDefault_Light_NoActionBar_Fullscreen) {
 
         this.context = context
         this.pairedDeviceList = deviceList
         this.selectionListener = listener
-        newDeviceList = ArrayList<SampleManager.PairableDeviceInfo>()
+        newDeviceList = ArrayList<SampleDataManager.PairableDeviceInfo>()
     }
 
 
@@ -33,9 +33,11 @@ class DeviceListDialog : Dialog {
         var btnNewListExit = findViewById<Button>(R.id.bt_new_list_close)
 
         btnPairedListExit.setOnClickListener {
+            selectionListener.onSelection(SampleDataManager.SelectionState.Close, null)
             dismiss()
         }
         btnNewListExit.setOnClickListener {
+            selectionListener.onSelection(SampleDataManager.SelectionState.Close, null)
             dismiss()
         }
 
@@ -57,7 +59,7 @@ class DeviceListDialog : Dialog {
                 button.text = deviceInfo.deviceName + " / " + deviceInfo.deviceAddress
 
                 button.setOnClickListener {
-                    selectionListener.onSelection(deviceInfo)
+                    selectionListener.onSelection(SampleDataManager.SelectionState.Selected, deviceInfo)
                     this.dismiss()
                 }
 
@@ -66,7 +68,7 @@ class DeviceListDialog : Dialog {
         }
     }
 
-    fun reDrawNewDeviceListUI(deviceInfo: SampleManager.PairableDeviceInfo?) {
+    fun reDrawNewDeviceListUI(deviceInfo: SampleDataManager.PairableDeviceInfo?) {
         var baseLayout: LinearLayout = findViewById(R.id.layout_new_devicelist)
         var btLayoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)
 
@@ -83,7 +85,7 @@ class DeviceListDialog : Dialog {
             button.text = it.deviceName + " / " + it.deviceAddress
 
             button.setOnClickListener {
-                selectionListener.onSelection(deviceInfo)
+                selectionListener.onSelection(SampleDataManager.SelectionState.Selected, deviceInfo)
                 this.dismiss()
             }
 
