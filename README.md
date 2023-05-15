@@ -3,7 +3,7 @@
 빌드 테스트 환경
 - 2023.05 ~
 - Android Studio Electric Eel 2022.1.1 Patch 2
-- Android 12 Device
+- Android 12 Device test
 
 애플리케이션 실행 후 UI 노출 결과에 따른 기능
 - 권한 요청
@@ -23,3 +23,6 @@
     - Connected : 연결되었음
 - 메시지 보내기 / 메시지 기록
   - 양쪽 디바이스가 모두 Connected 된 상태라면 메시지 보내기 / 메시지 기록을 확인할 수 있음
+
+개발 블로그
+- https://mystic-agit.tistory.com/13
