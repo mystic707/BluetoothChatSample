@@ -1,4 +1,4 @@
-# BluetoothSample
+# BluetoothChatSample
 
 빌드 테스트 환경
 - 2023.05 ~
